@@ -22,11 +22,9 @@ import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.view.ViewGroup.LayoutParams;
 import android.widget.ImageView;
-import android.widget.ToggleButton;
 
 import com.weemo.sdk.Weemo;
 import com.weemo.sdk.WeemoCall;
-import com.weemo.sdk.WeemoCall.VideoProfile;
 import com.weemo.sdk.WeemoCall.VideoSource;
 import com.weemo.sdk.WeemoEngine;
 import com.weemo.sdk.event.WeemoEventListener;
@@ -37,9 +35,9 @@ import com.weemo.sdk.view.WeemoVideoOutPreviewFrame;
 
 /*
  * This is the fragment that controls a call and display it's video views.
- * 
+ *
  * It uses the Weemo API to control everything that relates to the call, the video and the audio OUT.
- * 
+ *
  * Weemo does not exposes api to control audio IN.
  * This fragment uses Android's AudioManager to control everything that relates to audio IN.
  */
@@ -57,23 +55,22 @@ public class CallFragment extends Fragment {
 		fragment.setArguments(args);
 		return fragment;
 	}
-	
+
 	// Buttons
 	private @Nullable ImageView toggleIn;
 	private @Nullable ImageView muteOut;
 	private @Nullable ImageView video;
 	private @Nullable ImageView videoToggle;
 	private @Nullable ImageView hangup;
-	private @Nullable ToggleButton hdToggle;
-	
+
 	// The call
 	private @Nullable WeemoCall call;
-	
+
 	// This is the correction for the OrientationEventListener.
 	// It allows portrait devices (like phones) and landscape devices (like tablets)
 	// to have the same orientation result.
 	private int correction;
-	
+
 	// Whether or not the speakerphone is on.
 	// This is use to toggle
 	private boolean isSpeakerphoneOn;
@@ -83,10 +80,10 @@ public class CallFragment extends Fragment {
 
 	// Used to rotate UI elements according to device orientation
 	private @CheckForNull OrientationEventListener oel;
-	
+
 	// Used to receive Intent.ACTION_HEADSET_PLUG, which is when the headset is (un)plugged
 	private @Nullable BroadcastReceiver br;
-	
+
 	// Both frames (declared in the XML) that will contain video OUT and IN
 	private @Nullable WeemoVideoOutPreviewFrame videoOutFrame;
 	private @Nullable WeemoVideoInFrame videoInFrame;
@@ -102,17 +99,17 @@ public class CallFragment extends Fragment {
 		int callId = getArguments().getInt("callId");
 		assert weemo != null;
 		call = weemo.getCall(callId);
-		
+
 		// Register as event listener
 		Weemo.eventBus().register(this);
 	}
-	
+
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 		View root = inflater.inflate(R.layout.weemo_fragment_call, container, false);
 
 		boolean locked = getArguments().getBoolean("locked");
-		
+
 		// Get the OUT frame from the inflated view and set the call to use it
 		videoOutFrame = (WeemoVideoOutPreviewFrame) root.findViewById(R.id.video_out);
 		videoOutFrame.setUseDeviceOrientation(locked);
@@ -146,7 +143,7 @@ public class CallFragment extends Fragment {
 				}
 			};
 		}
-		
+
 		// Simple brodcast receiver that will call setSpeakerphoneOn when receiving an intent
 		// It will be registered for Intent.ACTION_HEADSET_PLUG intents
 		br = new BroadcastReceiver() {
@@ -154,7 +151,7 @@ public class CallFragment extends Fragment {
 				setSpeakerphoneOn(!audioManager.isWiredHeadsetOn());
 			}
 		};
-		
+
 		// Button that toggles audio route
 		toggleIn = (ImageView) root.findViewById(R.id.toggle_in);
 		toggleIn.setOnClickListener(new OnClickListener() {
@@ -220,15 +217,6 @@ public class CallFragment extends Fragment {
 			}
 		});
 
-		// Button that toggles if we want to receive HD video or not
-		hdToggle = (ToggleButton) root.findViewById(R.id.hd_toggle);
-		hdToggle.setOnClickListener(new OnClickListener() {
-			@Override public void onClick(View v) {
-				boolean hd = hdToggle.isChecked();
-				call.setInVideoProfile(hd ? VideoProfile.HD : VideoProfile.SD);
-			}
-		});
-		
 		// By default, we set the audio IN route according to isWiredHeadsetOn
 		setSpeakerphoneOn(!audioManager.isWiredHeadsetOn());
 
@@ -242,10 +230,10 @@ public class CallFragment extends Fragment {
 
 		// Sets the camera preview dimensions according to whether or not the remote contact has started his video
 		setVideoOutFrameDimensions(call.isReceivingVideo());
-		
+
 		return root;
 	}
-	
+
 	@Override
 	public void onDestroy() {
 		// Unregister as event listener
@@ -281,7 +269,7 @@ public class CallFragment extends Fragment {
 			params.width = LayoutParams.MATCH_PARENT;
 			params.height = LayoutParams.MATCH_PARENT;
 		}
-		
+
 		videoOutFrame.setLayoutParams(params);
 	}
 
@@ -295,7 +283,7 @@ public class CallFragment extends Fragment {
 			ObjectAnimator.ofFloat(view, property, current + 360).setDuration(0).start();
 		else if (current - angle > 180)
 			ObjectAnimator.ofFloat(view, property, current - 360).setDuration(0).start();
-		
+
 		ObjectAnimator.ofFloat(view, property, angle).start();
 	}
 
@@ -307,9 +295,8 @@ public class CallFragment extends Fragment {
 		animate(video,       "rotation", video.getRotation(),       orientation);
 		animate(videoToggle, "rotation", videoToggle.getRotation(), orientation);
 		animate(hangup,      "rotation", hangup.getRotation(),      orientation);
-		animate(hdToggle,    "rotation", hdToggle.getRotation(),    orientation);
 	}
-	
+
 	@Override
 	public void onStart() {
 		super.onStart();
@@ -317,7 +304,7 @@ public class CallFragment extends Fragment {
 		// Start listening for orientation changes
 		if (oel != null && oel.canDetectOrientation())
 			oel.enable();
-		
+
 		// Register the BrodcastReceiver to detect headset connection change
 		IntentFilter filter = new IntentFilter(Intent.ACTION_HEADSET_PLUG);
 		filter.setPriority(0);
@@ -336,7 +323,7 @@ public class CallFragment extends Fragment {
 
 		super.onStop();
 	}
-	
+
 	/*
 	 * This listener catches ReceivingVideoChangedEvent
 	 * 1. It is annotated with @WeemoEventListener
@@ -348,9 +335,9 @@ public class CallFragment extends Fragment {
 		// First, we check that this event concerns the call we are monitoring
 		if (e.getCall().getCallId() != call.getCallId())
 			return ;
-		
+
 		// Sets the camera preview dimensions according to whether or not the remote contact has started his video
 		setVideoOutFrameDimensions(e.isReceivingVideo());
 	}
-	
+
 }
