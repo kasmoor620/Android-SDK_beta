@@ -7,3 +7,4 @@ proguard-dump.txt
 .settings
 proguard/
 obj/
+libs/armeabi-v7a
