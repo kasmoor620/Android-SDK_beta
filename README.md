@@ -1,6 +1,6 @@
 ## Overview
 
-This project was made with Eclipse, to be sure of the compatibility of the SDK Helper we highly recommand to use this IDE.   
+This project was made with Eclipse.  We recommend using Eclipse for building the SDK Helper to ensure a smooth experience.
 
 Follow these 5 Step to test Weemo Technologies into a sample application.
 
@@ -75,7 +75,7 @@ Replace your "ENTER YOUR KEY HERE" by your mobileAppId provided by Weemo:
 
 ### Step 5 - Run the project 
 
-This project cannnot run in an Emulator, please run-it on your Android mobile ARM Device.
+This project cannot run in an Emulator, please run it on your Android mobile ARM Device.
 
 <p align="center">
 <img src="http://docs.weemo.com/img/android_run.png">
