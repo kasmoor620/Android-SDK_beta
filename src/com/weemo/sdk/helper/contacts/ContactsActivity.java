@@ -86,7 +86,7 @@ public class ContactsActivity extends Activity implements ChooseListener {
 			// Display the contact fragment
 			getFragmentManager()
 				.beginTransaction()
-				.add(R.id.contact_list, ChooseFragment.newInstance(getResources().getString(checkedMode ? R.string.check : R.string.call), displayName))
+				.add(R.id.contact_list, ChooseFragment.newInstance(getResources().getString(checkedMode ? R.string.check : R.string.call), uid))
 				.commit();
 		
 			// If we need to ask for the display name, shows the apropriate popup
