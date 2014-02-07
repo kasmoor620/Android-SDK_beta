@@ -1,3 +1,15 @@
+# Android SDK 5.1
+
+This repository hosts the Weemo Android SDK and accompanying
+demonstration app called "SDK_Helper".  The subdirectory named
+"WeemoSDK_Lib" contains the SDK.  The repository as a whole can be
+imported into Eclipse and the project is named "SDK_Helper."
+
+If you are interested in obtaining only the Android SDK, copy the
+subdirectory "WeemoSDK_Lib" into your own project.
+
+The rest of this note describes how to compile and build the SDK_Helper.
+
 ## Overview
 
 This project was made with Eclipse.  We recommend using Eclipse for building the SDK Helper to ensure a smooth experience.
@@ -11,16 +23,13 @@ Follow these 5 Step to test Weemo Technologies into a sample application.
 ### Step 0 - Install the sources
 
 ```
-git clone git@github.com:weemo/Android-SDK-Helper.git
-git submodule init
-git submodule update
+git clone git@github.com:weemo/Android-SDK_beta.git
 ```
 
 Later, when you update the sources, use:
 
 ```
 git pull
-git submodule update
 ```
 
 
@@ -85,5 +94,5 @@ This project cannot run in an Emulator, please run it on your Android mobile ARM
 ## Changelog
 
 This helper project is updated on an ad-hoc basis and does not necessary follows the relase agenda of the SDK.  
-The best changelog is therefore the [commit log](https://github.com/weemo/Android-SDK/commits/master).  
-However, a simple changelog is maintained as part of the [SDK changelog](https://github.com/weemo/Android-SDK/blob/master/CHANGELOG.md).
+The best changelog is therefore the [commit log](https://github.com/weemo/Android-SDK_beta/commits/master).  
+However, a simple changelog is maintained as part of the [SDK changelog](https://github.com/weemo/Android-SDK_beta/blob/master/CHANGELOG.md).
