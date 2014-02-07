@@ -1,11 +1,10 @@
 # Android SDK 5.1
 
 This repository hosts the Weemo Android SDK and accompanying
-demonstration app called "SDK_Helper".  The subdirectory named
-"WeemoSDK_Lib" contains the SDK.  The repository as a whole can be
-imported into Eclipse and the project is named "SDK_Helper."
+demonstration app called "SDK_Helper".   The repository as a whole can be
+imported into Eclipse and it will define a project namedd "SDK_Helper."
 
-If you are interested in obtaining only the Android SDK, copy the
+If you are interested in obtaining only the Android SDK, simply copy the
 subdirectory "WeemoSDK_Lib" into your own project.
 
 The rest of this note describes how to compile and build the SDK_Helper.
