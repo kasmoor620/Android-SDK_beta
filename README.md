@@ -95,4 +95,4 @@ This project cannot run in an Emulator, please run it on your Android mobile ARM
 
 This helper project is updated on an ad-hoc basis and does not necessary follows the relase agenda of the SDK.  
 The best changelog is therefore the [commit log](https://github.com/weemo/Android-SDK_beta/commits/master).  
-However, a simple changelog is maintained as part of the [SDK changelog](https://github.com/weemo/Android-SDK_beta/blob/master/CHANGELOG.md).
+However, a simple changelog is maintained as part of the [SDK changelog](https://github.com/weemo/Android-SDK/blob/master/CHANGELOG.md).
