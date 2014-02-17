@@ -90,6 +90,63 @@ This project cannot run in an Emulator, please run it on your Android mobile ARM
 </p>
 
 
+## Using the Helper Application
+
+The <tt>WeemoSDK-Helper</tt> can be used to set up a Weemo call
+between two Android devices, or between an Android device and another
+type of Weemo endpoint.  This short "HOWTO" note will describe how to
+set up a test call between two Android devices.
+
+A Weemo AppID identifies your application, and also defines a
+namespace of User-IDs.  To test two endpoints, you use the same AppID
+on both endpoints, and give each endpoint a unique User-ID.
+
+<p align="center"><img
+src="http://docs.weemo.com/img/android-sdk-5.1-helper-firstscreen.png"
+width="300"></p>
+
+The first screen of the Android helper is where you set the AppID.
+Enter the AppID given to you by Weemo and press OK.
+
+<p align="center"><img
+src="http://docs.weemo.com/img/android-sdk-5.1-helper-secondscreen.png"
+width="300"></p>
+
+Set your User-ID (UID) on the second screen.  The Helper App has a
+pre-defined list of users ("Kenzo Tenma", etc.) that can be convenient
+to use for testing.  You can either use one of these pre-defined
+users, or you can type in your own UID.  Here, we have typed
+"tsheffler."  Press the "Log in" button to complete the entry of your UID.
+
+<p align="center"><img
+src="http://docs.weemo.com/img/android-sdk-5.1-helper-thirdscreen.png"
+width="300"></p>
+
+Your Display Name is the long form of your name, and is how you are
+announced to other users on the system.  Type in your Display Name and
+press the OK button.
+
+<p align="center"><img
+src="http://docs.weemo.com/img/android-sdk-5.1-helper-fourthscreen.png"
+width="300"></p>
+
+On the Call screen, you can enter the UID of another user to initiate
+a test call.  You can call any UID that is connected to the Weemo
+realtime platform using the same AppID as your app.  Once again, you
+can choose a UID from the list of pre-defined users, or you can type
+in the UID of a contact.  Press the "Call" button to make the video call.
+
+<p align="center"><img
+src="http://docs.weemo.com/img/android-sdk-5.1-helper-answerscreen.png"
+width="300"></p>
+
+If your device is the target of a video call, the "Answer Call" pop-up
+will appear.  This announces the Display Name of the contact trying to
+reach your device.  Press "Answer" to accept the call, or "Decline" to
+cancel it.
+
+
+
 ## Changelog
 
 This helper project is updated on an ad-hoc basis and does not necessary follows the relase agenda of the SDK.  
