@@ -145,6 +145,11 @@ will appear.  This announces the Display Name of the contact trying to
 reach your device.  Press "Answer" to accept the call, or "Decline" to
 cancel it.
 
+## Related Information
+
+A note describing general Weemo concepts and app interoperability appears in [Getting Started](https://github.com/weemo/Weemo.js_beta/wiki/Getting-Started).
+
+A note describing how to upgrade your Android app from Weemo 4.2 to Weemo 5.1 appears [here](https://github.com/weemo/Android-SDK_beta/wiki/Upgrade-4.2-to-5.1).
 
 
 ## Changelog
