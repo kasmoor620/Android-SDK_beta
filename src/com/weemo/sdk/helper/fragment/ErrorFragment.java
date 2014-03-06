@@ -10,31 +10,43 @@ import android.widget.TextView;
 
 import com.weemo.sdk.helper.R;
 
-public class ErrorFragment extends Fragment implements android.view.View.OnClickListener {
+/**
+ * Fragment displaying an error and closing its activity when the user has acknowledged it
+ */
+public class ErrorFragment extends Fragment implements View.OnClickListener {
 
-	public static ErrorFragment newInstance(String text) {
-		ErrorFragment fragment = new ErrorFragment();
-		Bundle args = new Bundle();
-		args.putString("text", text);
+	/** Fragment required string argument key: the text of the error */
+	private static final String ARG_TEXT = "text";
+
+	/**
+	 * Factory (best practice for fragments)
+	 *
+	 * @param text The text of the error
+	 * @return The created fragment
+	 */
+	public static ErrorFragment newInstance(final String text) {
+		final ErrorFragment fragment = new ErrorFragment();
+		final Bundle args = new Bundle();
+		args.putString(ARG_TEXT, text);
 		fragment.setArguments(args);
 		return fragment;
 	}
 
 	@Override
-	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-		View root = inflater.inflate(R.layout.fragment_error, container, false);
-		
-		TextView errorText = (TextView) root.findViewById(R.id.errorText);
-		errorText.setText(getArguments().getString("text"));
-		
-		Button close = (Button) root.findViewById(R.id.close);
+	public View onCreateView(final LayoutInflater inflater, final ViewGroup container, final Bundle savedInstanceState) {
+		final View root = inflater.inflate(R.layout.fragment_error, container, false);
+
+		final TextView errorText = (TextView) root.findViewById(R.id.errorText);
+		errorText.setText(getArguments().getString(ARG_TEXT));
+
+		final Button close = (Button) root.findViewById(R.id.close);
 		close.setOnClickListener(this);
-		
+
 		return root;
 	}
 
 	@Override
-	public void onClick(View v) {
+	public void onClick(final View view) {
 		getActivity().finish();
 	}
 }

@@ -5,23 +5,37 @@ import java.lang.reflect.Field;
 import android.app.Activity;
 import android.view.ViewConfiguration;
 
-public abstract class UIUtils {
+/**
+ * Small repository of utility functions
+ */
+public final class UIUtils {
 
-	// This is a horrible hack whose purpose is to force the display of the overflow...
-	// http://stackoverflow.com/a/11438245/1269640
-	// https://code.google.com/p/android/issues/detail?id=38013
-	public static void forceOverflowMenu(Activity activity) {
+	/**
+	 * This class is a function repository and cannot be instanciated
+	 */
+	private UIUtils() {}
+
+	/**
+	 * This is a horrible hack whose purpose is to force the display of the overflow...
+	 *
+	 * http://stackoverflow.com/a/11438245/1269640
+	 * https://code.google.com/p/android/issues/detail?id=38013
+	 *
+	 * @param activity The activity to hack
+	 */
+	public static void forceOverflowMenu(final Activity activity) {
 		try {
-			ViewConfiguration config = ViewConfiguration.get(activity);
-			Field menuKeyField = ViewConfiguration.class.getDeclaredField("sHasPermanentMenuKey");
+			final ViewConfiguration config = ViewConfiguration.get(activity);
+			final Field menuKeyField = ViewConfiguration.class.getDeclaredField("sHasPermanentMenuKey");
 			if (menuKeyField != null) {
 				menuKeyField.setAccessible(true);
 				menuKeyField.setBoolean(config, false);
 			}
 		}
-		catch (Exception ex) {
+		catch (Throwable exc) {
+			exc.printStackTrace();
 			// Ignore
 		}
 	}
-	
+
 }

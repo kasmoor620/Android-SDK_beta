@@ -32,6 +32,7 @@
             android:theme="@android:style/Theme.Holo.Light" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
             <intent-filter>
@@ -45,8 +46,7 @@
         </activity>
         <activity
             android:name="com.weemo.sdk.helper.contacts.ContactsActivity"
-            android:launchMode="singleTop"
-            android:configChanges="keyboard|keyboardHidden|orientation|screenSize|smallestScreenSize" >
+            android:launchMode="singleTop" >
         </activity>
         <activity
             android:name="com.weemo.sdk.helper.call.IncomingActivity"
@@ -73,6 +73,11 @@
 
         <service android:name="com.weemo.sdk.helper.connect.ConnectedService" >
         </service>
+
+        <activity
+            android:name="com.weemo.sdk.helper.MainActivity"
+            android:label="@string/title_activity_main" >
+        </activity>
     </application>
 
 </manifest>

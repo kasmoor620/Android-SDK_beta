@@ -15,27 +15,47 @@ import android.widget.EditText;
 
 import com.weemo.sdk.helper.R;
 
+/**
+ * This is a very simple fragment that displays a message and an input
+ */
 public class InputFragment extends DialogFragment {
 
-	public static InputFragment newInstance(String text) {
-		InputFragment fragment = new InputFragment();
-		Bundle args = new Bundle();
-		args.putString("text", text);
+	/** Fragment required string argument key: the text of the dialog */
+	private static final String ARG_TEXT = "text";
+
+	/**
+	 * Factory (best practice for fragments)
+	 *
+	 * @param text The text of the dialog
+	 * @return The created fragment
+	 */
+	public static InputFragment newInstance(final String text) {
+		final InputFragment fragment = new InputFragment();
+		final Bundle args = new Bundle();
+		args.putString(ARG_TEXT, text);
 		fragment.setArguments(args);
 		return fragment;
 	}
 
+	/**
+	 * Interface that activities using this fragment must implements
+	 */
 	public static interface InputListener {
+		/**
+		 * Used by this fragment to tell its activity that the user has entered and validated an input
+		 *
+		 * @param text The entered text
+		 */
 		public void onInput(String text);
 	}
-	
+
 	@Override
-	public Dialog onCreateDialog(Bundle savedInstanceState) {
-		AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+	public Dialog onCreateDialog(final Bundle savedInstanceState) {
+		final AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
 		builder.setTitle(R.string.weemo_appid);
 		final View root = LayoutInflater.from(getActivity()).inflate(R.layout.fragment_input, null);
 		final EditText input = (EditText) root.findViewById(R.id.input);
-		input.setText(getArguments().getString("text"));
+		input.setText(getArguments().getString(ARG_TEXT));
 		input.selectAll();
 		builder.setView(root);
 
@@ -46,16 +66,16 @@ public class InputFragment extends DialogFragment {
 		// We use this instead of setPositiveButtonlistener to be able to prevent dismissal
 		dialog.setOnShowListener(new OnShowListener() {
 			@Override public void onShow(final DialogInterface dialogInterface) {
-				final Button button = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+				final Button button = dialog.getButton(DialogInterface.BUTTON_POSITIVE);
 				button.setOnClickListener(new OnClickListener() {
-					@Override public void onClick(View view) {
-						String txt = input.getText().toString();
+					@Override public void onClick(final View view) {
+						final String txt = input.getText().toString();
 						((InputListener) getActivity()).onInput(txt);
 					}
 				});
 			}
 		});
-		
+
 //		setCancelable(false);
 //		dialog.setCancelable(false);
 
@@ -65,9 +85,9 @@ public class InputFragment extends DialogFragment {
 
 		return dialog;
 	}
-	
+
 	@Override
-	public void onCancel(DialogInterface dialog) {
+	public void onCancel(final DialogInterface dialog) {
 		super.onCancel(dialog);
 		getActivity().onBackPressed();
 	}

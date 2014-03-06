@@ -1,4 +1,4 @@
 <resources>
     <bool name="isTablet">true</bool>
-    <bool name="isBigTablet">true</bool>
+    <bool name="isBigTablet">false</bool>
 </resources>
