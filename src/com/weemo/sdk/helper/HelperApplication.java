@@ -9,7 +9,6 @@ import org.acra.sender.HttpSender;
 import android.app.Application;
 
 import com.github.anrwatchdog.ANRWatchDog;
-import com.github.nativehandler.NativeCrashHandler;
 import com.weemo.sdk.Weemo;
 import com.weemo.sdk.helper.util.AttachmentEmailACRASender;
 
@@ -73,15 +72,12 @@ public class HelperApplication extends Application {
 		// Please not that the three steps below are only useful for error reporting purposes.
 		// It is not needed in a client application.
 
-//		// ACRA startup
-//		ACRA.init(this);
-//		ACRA.getErrorReporter().setReportSender(new AttachmentEmailACRASender(this));
-//
-//		// Starts the ANR WatchDog
-//		// More intel in https://github.com/SalomonBrys/ANR-WatchDog
-//		new ANRWatchDog().start();
-//
-//		// Registers the Native Crash Handler to be activated in case of native crash.
-//		new NativeCrashHandler().registerForNativeCrash(this);
+		// ACRA startup
+		ACRA.init(this);
+		ACRA.getErrorReporter().setReportSender(new AttachmentEmailACRASender(this));
+
+		// Starts the ANR WatchDog
+		// More intel in https://github.com/SalomonBrys/ANR-WatchDog
+		new ANRWatchDog().start();
 	}
 }
