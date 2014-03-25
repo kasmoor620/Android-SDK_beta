@@ -19,11 +19,11 @@ import com.weemo.sdk.event.global.ConnectedEvent;
 import com.weemo.sdk.helper.R;
 import com.weemo.sdk.helper.contacts.ContactsActivity;
 import com.weemo.sdk.helper.fragment.ChooseFragment;
+import com.weemo.sdk.helper.fragment.ChooseFragment.ChooseListener;
 import com.weemo.sdk.helper.fragment.ErrorFragment;
 import com.weemo.sdk.helper.fragment.InputFragment;
-import com.weemo.sdk.helper.fragment.LoadingDialogFragment;
-import com.weemo.sdk.helper.fragment.ChooseFragment.ChooseListener;
 import com.weemo.sdk.helper.fragment.InputFragment.InputListener;
+import com.weemo.sdk.helper.fragment.LoadingDialogFragment;
 import com.weemo.sdk.helper.util.ReportException;
 import com.weemo.sdk.helper.util.UIUtils;
 
@@ -136,7 +136,12 @@ public class ConnectActivity extends Activity implements InputListener, ChooseLi
 	public void onChoose(final String userId) {
 		final WeemoEngine weemo = Weemo.instance();
 		if (weemo == null) {
-			throw new RuntimeException("onChoose called while while Weemo is not initialized"); // NOPMD - This actually is a runtime exception
+			final DialogFragment dialog = (DialogFragment) getFragmentManager().findFragmentByTag(TAG_DIALOG);
+			if (dialog != null) {
+				dialog.dismiss();
+			}
+			getFragmentManager().beginTransaction().replace(android.R.id.content, ErrorFragment.newInstance("Connection lost")).commit();
+			return ;
 		}
 
 		final LoadingDialogFragment dialog = LoadingDialogFragment.newFragmentInstance(userId, getString(R.string.authentication_title));
@@ -220,5 +225,4 @@ public class ConnectActivity extends Activity implements InputListener, ChooseLi
 		startActivity(new Intent(this, ContactsActivity.class));
 		finish();
 	}
-
 }
