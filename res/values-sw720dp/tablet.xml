@@ -1,4 +1,4 @@
 <resources>
     <bool name="isTablet">true</bool>
-    <bool name="isBigTablet">true</bool>
+    <item name="camera_correction" type="integer">0</item>
 </resources>

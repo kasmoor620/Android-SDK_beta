@@ -3,7 +3,12 @@ package com.weemo.sdk.helper.call;
 import javax.annotation.Nullable;
 
 import android.app.Activity;
+import android.app.DialogFragment;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.media.AudioManager;
 import android.os.Bundle;
+import android.widget.Toast;
 
 import com.weemo.sdk.Weemo;
 import com.weemo.sdk.WeemoCall;
@@ -11,6 +16,11 @@ import com.weemo.sdk.WeemoCall.CallStatus;
 import com.weemo.sdk.WeemoEngine;
 import com.weemo.sdk.event.WeemoEventListener;
 import com.weemo.sdk.event.call.CallStatusChangedEvent;
+import com.weemo.sdk.event.global.CanCreateCallChangedEvent;
+import com.weemo.sdk.event.global.CanCreateCallChangedEvent.Error;
+import com.weemo.sdk.helper.R;
+import com.weemo.sdk.helper.call.CallFragment.TouchType;
+import com.weemo.sdk.helper.fragment.LoadingDialogFragment;
 
 /**
  * This is the activity in which calls will take place for phone devices.
@@ -20,12 +30,12 @@ import com.weemo.sdk.event.call.CallStatusChangedEvent;
  *
  * We will handle ourselves the rotation of the ui buttons to match the device rotation (in the fragment).
  */
-public class CallActivity extends Activity {
+public class CallActivity extends Activity implements DialogInterface.OnCancelListener {
 
 	/**
 	 * The current call
 	 */
-	private @Nullable WeemoCall call;
+	protected @Nullable WeemoCall call;
 
 	@Override
 	protected void onCreate(final Bundle savedInstanceState) {
@@ -55,13 +65,17 @@ public class CallActivity extends Activity {
 			return ;
 		}
 
+		if (savedInstanceState == null) {
+			((AudioManager) getSystemService(Context.AUDIO_SERVICE)).setSpeakerphoneOn(true);
+		}
+
 		setTitle(this.call.getContactDisplayName());
 
 		// Add the call window fragment
 		if (savedInstanceState == null) {
 			getFragmentManager()
 				.beginTransaction()
-				.replace(android.R.id.content, CallFragment.newInstance(callId, true, -1))
+				.replace(android.R.id.content, CallFragment.newInstance(callId, TouchType.SLIDE_CONTROLS_FULLSCREEN, getResources().getInteger(R.integer.camera_correction)))
 				.commit();
 		}
 
@@ -76,7 +90,6 @@ public class CallActivity extends Activity {
 
 		// When we leave this activity, we stop the video.
 		if (this.call != null) {
-			this.call.videoStop();
 			this.call.setVideoOut(null);
 			this.call.setVideoIn(null);
 		}
@@ -112,4 +125,38 @@ public class CallActivity extends Activity {
 			finish();
 		}
 	}
+
+	/**
+	 * This listener catches CallStatusChangedEvent
+	 * 1. It is annotated with @WeemoEventListener
+	 * 2. It takes one argument which type is CallStatusChangedEvent
+	 * 3. It's activity object has been registered with Weemo.getEventBus().register(this) in onCreate()
+	 *
+	 * @param event The event
+	 */
+	@WeemoEventListener
+	public void onCanCreateCallChanged(final CanCreateCallChangedEvent event) {
+		final Error error = event.getError();
+		if (error == CanCreateCallChangedEvent.Error.NETWORK_LOST) {
+			final LoadingDialogFragment dialog = LoadingDialogFragment.newFragmentInstance("Disconnected", "Trying to reconnect...", "hang up");
+			dialog.setCancelable(false);
+			dialog.show(getFragmentManager(), "dialog");
+		}
+		else if (error == CanCreateCallChangedEvent.Error.CLOSED) {
+			Toast.makeText(this, error.description(), Toast.LENGTH_SHORT).show();
+			finish();
+		}
+		else if (error == null) {
+			final DialogFragment dialog = (DialogFragment) getFragmentManager().findFragmentByTag("dialog");
+			if (dialog != null) {
+				dialog.dismiss();
+			}
+		}
+	}
+
+	@Override
+	public void onCancel(DialogInterface dialog) {
+		this.call.hangup();
+	}
+
 }

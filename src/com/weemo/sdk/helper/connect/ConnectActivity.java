@@ -120,7 +120,7 @@ public class ConnectActivity extends Activity implements InputListener, ChooseLi
 			dialog.dismiss();
 		}
 
-		final LoadingDialogFragment loadingFragment = LoadingDialogFragment.newFragmentInstance(getString(R.string.connection_title), getString(R.string.connection_text));
+		final LoadingDialogFragment loadingFragment = LoadingDialogFragment.newFragmentInstance(getString(R.string.connection_title), getString(R.string.connection_text), null);
 		loadingFragment.setCancelable(false);
 		loadingFragment.show(getFragmentManager(), TAG_DIALOG);
 
@@ -134,19 +134,20 @@ public class ConnectActivity extends Activity implements InputListener, ChooseLi
 	 */
 	@Override
 	public void onChoose(final String userId) {
+		final DialogFragment chooseDialog = (DialogFragment) getFragmentManager().findFragmentByTag(TAG_DIALOG);
+		if (chooseDialog != null) {
+			chooseDialog.dismiss();
+		}
+
 		final WeemoEngine weemo = Weemo.instance();
 		if (weemo == null) {
-			final DialogFragment dialog = (DialogFragment) getFragmentManager().findFragmentByTag(TAG_DIALOG);
-			if (dialog != null) {
-				dialog.dismiss();
-			}
 			getFragmentManager().beginTransaction().replace(android.R.id.content, ErrorFragment.newInstance("Connection lost")).commit();
 			return ;
 		}
 
-		final LoadingDialogFragment dialog = LoadingDialogFragment.newFragmentInstance(userId, getString(R.string.authentication_title));
-		dialog.setCancelable(false);
-		dialog.show(getFragmentManager(), TAG_DIALOG);
+		final LoadingDialogFragment loadingDialog = LoadingDialogFragment.newFragmentInstance(userId, getString(R.string.authentication_title), null);
+		loadingDialog.setCancelable(false);
+		loadingDialog.show(getFragmentManager(), TAG_DIALOG);
 
 		// Start authentication with the userId chosen by the user.
 		ContactsActivity.currentUid = userId;

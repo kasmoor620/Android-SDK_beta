@@ -11,6 +11,7 @@ import android.app.DialogFragment;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -49,6 +50,9 @@ public class ChooseFragment extends DialogFragment {
 
 	/** Proposed accounts */
 	protected Map<String, String> accounts = new LinkedHashMap<String, String>(DemoAccounts.ACCOUNTS);
+
+	/** The string that should be hidden*/
+	private String removeID;
 
 	/**
 	 * Factory (best practice for fragments)
@@ -92,9 +96,9 @@ public class ChooseFragment extends DialogFragment {
 	public void onCreate(final Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
-		final String removeID = getArguments().getString(ARG_REMOVEID);
-		if (removeID != null) {
-			this.accounts.remove(removeID);
+		this.removeID = getArguments().getString(ARG_REMOVEID);
+		if (this.removeID != null) {
+			this.accounts.remove(this.removeID);
 		}
 	}
 
@@ -116,6 +120,11 @@ public class ChooseFragment extends DialogFragment {
 		final View root = inflater.inflate(R.layout.fragment_choose, container, false);
 
 		this.input = (EditText) root.findViewById(R.id.input);
+		if (TextUtils.isEmpty(this.removeID)) {
+			this.input.setText(DemoAccounts.getDeviceName(true));
+			this.input.selectAll();
+		}
+
 		this.goBtn = (Button) root.findViewById(R.id.go);
 
 		this.goBtn.setText(getArguments().getString(ARG_BUTTONTEXT));

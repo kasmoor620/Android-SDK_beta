@@ -22,20 +22,19 @@
             android:layout_height="match_parent"
             android:layout_gravity="bottom|left"
             android:layout_margin="20dp" >
-
         </com.weemo.sdk.view.WeemoVideoOutPreviewFrame>
     </FrameLayout>
 
     <com.weemo.sdk.helper.call.CallControl
         android:id="@+id/call_control"
         weemo_cv:style="dark"
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignParentLeft="true"
         android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
         android:background="#8333"
+        android:minWidth="400dp"
         android:paddingTop="@dimen/weemo_callcontrols_paddingTop" >
-
     </com.weemo.sdk.helper.call.CallControl>
 
 </RelativeLayout>

@@ -1,8 +1,13 @@
 package com.weemo.sdk.helper.fragment;
 
+import javax.annotation.CheckForNull;
+
+import android.app.Activity;
 import android.app.Dialog;
 import android.app.DialogFragment;
 import android.app.ProgressDialog;
+import android.content.DialogInterface;
+import android.content.DialogInterface.OnClickListener;
 import android.os.Bundle;
 
 /**
@@ -23,13 +28,17 @@ public class LoadingDialogFragment extends DialogFragment {
 	 *
 	 * @param title The title of the dialog
 	 * @param text The text of the dialog
+	 * @param cancel Text for cancel button (can be null)
 	 * @return The created fragment
 	 */
-	public static LoadingDialogFragment newFragmentInstance(final String title, final String text) {
+	public static LoadingDialogFragment newFragmentInstance(final String title, final String text, final @CheckForNull String cancel) {
 		final LoadingDialogFragment fragment = new LoadingDialogFragment();
 		final Bundle args = new Bundle();
 		args.putString(ARG_TITLE, title);
 		args.putString(ARG_TEXT, text);
+		if (cancel != null) {
+			args.putString("cancel", cancel);
+		}
 		fragment.setArguments(args);
 		return fragment;
 	}
@@ -41,7 +50,17 @@ public class LoadingDialogFragment extends DialogFragment {
 		dialog.setTitle(getArguments().getString(ARG_TITLE));
 		dialog.setMessage(getArguments().getString(ARG_TEXT));
 
-		dialog.setIndeterminate(true);
+		String cancel = getArguments().getString("cancel");
+		if (cancel != null) {
+			dialog.setButton(DialogInterface.BUTTON_NEGATIVE, cancel, new OnClickListener() {
+				@Override public void onClick(final DialogInterface dlg, int which) {
+					Activity activity = getActivity();
+					if (activity instanceof DialogInterface.OnCancelListener) {
+						((DialogInterface.OnCancelListener) activity).onCancel(dialog);
+					}
+				}
+			});
+		}
 
 		return dialog;
 	}

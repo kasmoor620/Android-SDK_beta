@@ -13,11 +13,6 @@
     <string name="unreachable">User ID unreachable</string>
     <string name="disconnect">Disconnect</string>
     <string name="checked_mode">Checked mode</string>
-    <string name="content_description_mute_sound">Mute or un-mute sound</string>
-    <string name="content_description_mute_mic">Mute or un-mute microphone</string>
-    <string name="content_description_video">Show or stop showing your video</string>
-    <string name="content_description_video_toggle">Toggle video input (front or back)</string>
-    <string name="content_description_hangup">Hangup</string>
     <string name="is_calling_you">…is calling you!</string>
     <string name="answer">Answer</string>
     <string name="decline">Decline</string>
@@ -35,6 +30,7 @@
     <string name="close_app">Close the application</string>
     <string name="title_activity_main">MainActivity</string>
     <string name="action_settings">Settings</string>
-    <string name="hello_world">Hello world!</string>
+    <string name="contacts_open">Open contacts</string>
+    <string name="contacts_close">Close contacts</string>
 
 </resources>

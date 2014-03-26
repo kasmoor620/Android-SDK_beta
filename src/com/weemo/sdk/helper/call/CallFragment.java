@@ -3,30 +3,25 @@ package com.weemo.sdk.helper.call;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nullable;
 
-import android.animation.ObjectAnimator;
+import android.animation.Animator;
+import android.animation.AnimatorInflater;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.AnimatorSet;
 import android.app.Fragment;
-import android.content.BroadcastReceiver;
-import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
-import android.hardware.Camera;
-import android.hardware.SensorManager;
-import android.media.AudioManager;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.DisplayMetrics;
 import android.util.TypedValue;
 import android.view.LayoutInflater;
-import android.view.OrientationEventListener;
-import android.view.Surface;
+import android.view.MotionEvent;
 import android.view.View;
-import android.view.View.OnClickListener;
+import android.view.View.OnSystemUiVisibilityChangeListener;
+import android.view.View.OnTouchListener;
 import android.view.ViewGroup;
-import android.view.ViewGroup.LayoutParams;
-import android.widget.ImageView;
+import android.view.WindowManager;
 
 import com.weemo.sdk.Weemo;
 import com.weemo.sdk.WeemoCall;
-import com.weemo.sdk.WeemoCall.VideoSource;
 import com.weemo.sdk.WeemoEngine;
 import com.weemo.sdk.event.WeemoEventListener;
 import com.weemo.sdk.event.call.ReceivingVideoChangedEvent;
@@ -35,307 +30,284 @@ import com.weemo.sdk.view.WeemoVideoInFrame;
 import com.weemo.sdk.view.WeemoVideoOutPreviewFrame;
 
 /**
- * This is the fragment that controls a call and display it's video views.
+ * This is the fragment that displays a call video views.
  *
- * It uses the Weemo API to control everything that relates to the call, the video and the audio OUT.
- *
- * Weemo does not exposes api to control audio IN.
- * This fragment uses Android's AudioManager to control everything that relates to audio IN.
+ * It uses the {@link CallControl} view to control the call
  */
-@SuppressWarnings("deprecation")
-public class CallFragment extends Fragment {
+public class CallFragment extends Fragment implements OnSystemUiVisibilityChangeListener, OnTouchListener {
 
-	/** Fragment required int argument key: for the call ID */
+	/** fragment argument key */
+	private static final int CONTROL_DELAY = 4000;
+
+	/** fragment argument key */
 	private static final String ARG_CALLID = "callId";
 
-	/** Fragment required boolean argument key: whether the orientation is locked */
-	private static final String ARG_LOCKED = "locked";
+	/** fragment argument key */
+	private static final String ARG_SHOW_CONTROL = "show_control";
 
-	/** Fragment required int argument key: the video out correction */
+	/** fragment argument key */
+	private static final String ARG_SLIDE_CONTROL = "slide_control";
+
+	/** fragment argument key */
+	private static final String ARG_FULLSCREEN = "fullscreen";
+
+	/** fragment argument key */
 	private static final String ARG_CORRECTION = "correction";
 
-	/** The rotation property on the view to animate */
-	private static final String PROP_ROTATION = "rotation";
+	/** UI (main) thread handler */
+	private @Nullable Handler handler;
 
-	/** Button */
-	private @Nullable ImageView toggleIn;
-	/** Button */
-	protected @Nullable ImageView muteOut;
-	/** Button */
-	protected @Nullable ImageView video;
-	/** Button */
-	protected @Nullable ImageView videoToggle;
-	/** Button */
-	private @Nullable ImageView hangup;
+	/** Runnable that will hide the call control bar */
+	private @Nullable Runnable removeControl;
 
-	/** The current call */
-	protected @Nullable WeemoCall call;
+	/** number of pixels in 20dp (so we don't have to recalculate this every time) */
+	private float dp20;
 
-	/**
-	 * This is the correction for the OrientationEventListener.
-	 * It allows portrait devices (like phones) and landscape devices (like tablets)
-	 * to have the same orientation result.
-	 */
-	protected int correction;
+	/** The call control bar */
+	protected @Nullable CallControl controls;
 
-	/** Whether or not the speakerphone is on. */
-	protected boolean isSpeakerphoneOn;
-
-	/** The audio manager used to control audio */
-	protected @Nullable AudioManager audioManager;
-
-	/** Used to rotate UI elements according to device orientation */
-	private @CheckForNull OrientationEventListener oel;
-
-	/** Used to receive Intent.ACTION_HEADSET_PLUG, which is when the headset is (un)plugged */
-	private @Nullable BroadcastReceiver headsetPlugReceiver;
+	/** The call to display */
+	protected @CheckForNull WeemoCall call;
 
 	/** Frame (declared in the XML) that will contain video OUT */
 	protected @Nullable WeemoVideoOutPreviewFrame videoOutFrame;
 
+	/**
+	 * Behaviour expected from this fragment on touch regarding the call control bar
+	 */
+	public enum TouchType {
+		/** Nothing happens. This fragment does have a call control bar. You are responsible for controlling the call */
+		NO_CONTROLS                (false, false, false),
+
+		/** The control bar is displayed and stays in place */
+		STATIC_CONTROLS            (true,  false, false),
+
+		/** The control bar is displayed and is hidden after {@link #CONTROL_DELAY}, it reappears on touch */
+		SLIDE_CONTROLS             (true,  true,  false),
+
+		/** The control bar is displayed and is hidden after {@link #CONTROL_DELAY}, it reappears on touch.
+		 * When the control bar is hidden, the activity is set to fullscreen */
+		SLIDE_CONTROLS_FULLSCREEN  (true,  true,  true );
+
+		/** Whether or not to display the control bar */
+		public final boolean show_control;
+
+		/** Whether or not the control bar slides away */
+		public final boolean slide_control;
+
+		/** Whether or not, when the control bar is hidden, the activity is set to fullscreen */
+		public final boolean fullscreen;
+
+		/**
+		 * Constructor
+		 *
+		 * @param show_control Whether or not to display the control bar
+		 * @param slide_control Whether or not the control bar slides away
+		 * @param fullscreen Whether or not, when the control bar is hidden, the activity is set to fullscreen
+		 */
+		private TouchType(boolean show_control, boolean slide_control, boolean fullscreen) {
+			this.show_control = show_control;
+			this.slide_control = slide_control;
+			this.fullscreen = fullscreen;
+		}
+	}
 
 	/**
 	 * Factory (best practice for fragments)
 	 *
-	 * @param callId The ID of the call
-	 * @param locked Whether this fragment is in a orientation locked window
-	 * @param correction The correction (should be 90 for a small tablet, -1 otherwise)
+	 * @param callId The ID of the call to display
+	 * @param touchType Behaviour expected from this fragment on touch regarding the call control bar
+	 * @param correction The correction of the camera orientation (should be 90 on portrait devices, 0 on landscape devices)
 	 * @return The fragment
 	 */
-	public static CallFragment newInstance(final int callId, final boolean locked, final int correction) {
-		final CallFragment fragment = new CallFragment();
-		final Bundle args = new Bundle();
+	public static CallFragment newInstance(int callId, TouchType touchType, int correction) {
+		CallFragment fragment = new CallFragment();
+		Bundle args = new Bundle();
 		args.putInt(ARG_CALLID, callId);
-		args.putBoolean(ARG_LOCKED, locked);
+		args.putBoolean(ARG_SHOW_CONTROL, touchType.show_control);
+		args.putBoolean(ARG_SLIDE_CONTROL, touchType.slide_control);
+		args.putBoolean(ARG_FULLSCREEN, touchType.fullscreen);
 		args.putInt(ARG_CORRECTION, correction);
 		fragment.setArguments(args);
 		return fragment;
 	}
 
+	/**
+	 * Shows the call control bars
+	 * Does nothing if the fragment is not configured to hide the call control bar
+	 */
+	private void show() {
+		if (!getArguments().getBoolean(ARG_SLIDE_CONTROL)) {
+			return ;
+		}
+
+		if (getArguments().getBoolean(ARG_FULLSCREEN)) {
+			getActivity().getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+		}
+
+		this.handler.postDelayed(new Runnable() {
+			@Override public void run() {
+				CallFragment.this.controls.setVisibility(View.VISIBLE);
+				AnimatorSet set = (AnimatorSet) AnimatorInflater.loadAnimator(getActivity(), R.animator.weemo_callcontrol_enter);
+
+				set.setTarget(CallFragment.this.controls);
+				set.start();
+			}
+		}, 200);
+	}
+
+	/**
+	 * hides the call control bars
+	 * Does nothing if the fragment is not configured to hide the call control bar
+	 */
+	protected void hide() {
+		if (!getArguments().getBoolean(ARG_SLIDE_CONTROL)) {
+			return ;
+		}
+
+		AnimatorSet set = (AnimatorSet) AnimatorInflater.loadAnimator(getActivity(), R.animator.weemo_callcontrol_exit);
+		set.setTarget(this.controls);
+		set.addListener(new AnimatorListenerAdapter() {
+			@Override public void onAnimationEnd(Animator animation) {
+				CallFragment.this.controls.setVisibility(View.GONE);
+				if (getArguments().getBoolean(ARG_FULLSCREEN) && getActivity() != null && getActivity().getWindow() != null) {
+					getActivity().getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
+					getActivity().getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
+				}
+			}
+		});
+		set.start();
+	}
+
 	@Override
-	public void onCreate(final Bundle savedInstanceState) {
+	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
-		this.audioManager = (AudioManager) getActivity().getSystemService(Context.AUDIO_SERVICE);
+		getActivity().getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+		this.removeControl = new Runnable() { // I miss Java8... this.removeControl = this::hide;
+			@Override public void run() { hide(); }
+		};
+		this.handler = new Handler();
+
+		if (getArguments().getBoolean(ARG_FULLSCREEN)) {
+			getActivity().getWindow().addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
+			getActivity().getWindow().addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION);
+			getActivity().getWindow().getDecorView().setOnSystemUiVisibilityChangeListener(this);
+		}
+
+		this.dp20 = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 70, getResources().getDisplayMetrics());
+
+		postControlRemove();
 
 		final WeemoEngine weemo = Weemo.instance();
-		// This check should has been done by the activity
+		if (weemo == null) {
+			throw new UnsupportedOperationException("Cannot use the CallFragment if Weemo is not initialized");
+		}
+
 		final int callId = getArguments().getInt(ARG_CALLID);
-		assert weemo != null;
 		this.call = weemo.getCall(callId);
 
-		// Register as event listener
 		Weemo.eventBus().register(this);
 	}
 
-	/**
-	 * Initializes call & audio related buttons
-	 *
-	 * @param root The root view containing the buttons
-	 */
-	private void initCallButtons(final View root) {
-		// Button that toggles audio route
-		this.toggleIn = (ImageView) root.findViewById(R.id.toggle_in);
-		this.toggleIn.setOnClickListener(new OnClickListener() {
-			@Override public void onClick(final View view) {
-				setSpeakerphoneOn(!CallFragment.this.isSpeakerphoneOn);
-			}
-		});
-
-		// Button that toggles audio OUT mute
-		this.muteOut = (ImageView) root.findViewById(R.id.mute_out);
-		this.muteOut.setOnClickListener(new OnClickListener() {
-			private boolean mute; // = false;
-			@Override public void onClick(final View view) {
-				this.mute = !this.mute;
-				if (this.mute) {
-					CallFragment.this.call.audioMute();
-					CallFragment.this.muteOut.setImageResource(R.drawable.weemo_mic_muted);
-				}
-				else {
-					CallFragment.this.call.audioUnMute();
-					CallFragment.this.muteOut.setImageResource(R.drawable.weemo_mic_on);
-				}
-			}
-		});
-
-		// Button that hangs up the call
-		this.hangup = (ImageView) root.findViewById(R.id.hangup);
-		this.hangup.setOnClickListener(new OnClickListener() {
-			@Override public void onClick(final View view) {
-				CallFragment.this.call.hangup();
-			}
-		});
-	}
-
-	/**
-	 * Initializes video related buttons
-	 *
-	 * @param root The root view containing the buttons
-	 */
-	private void initVideoButtons(final View root) {
-		// Button that toggles sending video
-		// Note that we also toggle the videoOutFrame visibility
-		this.video = (ImageView) root.findViewById(R.id.video);
-		this.video.setOnClickListener(new OnClickListener() {
-			boolean videoRunning = true;
-			@Override public void onClick(final View view) {
-				this.videoRunning = !this.videoRunning;
-				if (this.videoRunning) {
-					CallFragment.this.video.setImageResource(R.drawable.weemo_video_on);
-					CallFragment.this.videoOutFrame.setVisibility(View.VISIBLE);
-					CallFragment.this.call.videoStart();
-					if (Camera.getNumberOfCameras() > 1) {
-						CallFragment.this.videoToggle.setVisibility(View.VISIBLE);
-					}
-				}
-				else {
-					CallFragment.this.video.setImageResource(R.drawable.weemo_video_off);
-					CallFragment.this.videoOutFrame.setVisibility(View.GONE);
-					CallFragment.this.call.videoStop();
-					CallFragment.this.videoToggle.setVisibility(View.GONE);
-				}
-			}
-		});
-
-		// Button that toggles sending video source
-		this.videoToggle = (ImageView) root.findViewById(R.id.video_toggle);
-		if (Camera.getNumberOfCameras() <= 1) {
-			this.videoToggle.setVisibility(View.GONE);
-		}
-		this.videoToggle.setOnClickListener(new OnClickListener() {
-			boolean front = true;
-			@Override public void onClick(final View view) {
-				this.front = !this.front;
-				CallFragment.this.call.setVideoSource(this.front ? VideoSource.FRONT : VideoSource.BACK);
-			}
-		});
-	}
-
-	/**
-	 * Computes the closest capped orientation, meaning 0, 90, 180 or 270
-	 *
-	 * @param orientation The real orientation
-	 * @return The capped orientation
-	 */
-	protected static int getCappedOrientation(final int orientation) {
-		if (orientation > 45 && orientation <= 135) { return 270; }
-		else if (orientation > 135 && orientation <= 225) { return 180; }
-		else if (orientation > 225 && orientation <= 315) { return 90; }
-		else if (orientation > 315 || orientation <= 45) { return 0; }
-		return 0;
-	}
-
-	/**
-	 * Get the orienation in degrees according from the surface rotation.
-	 *
-	 * @param rotation The surface rotation, should be one of Surface.ROTATION_*
-	 * @return The corresponding orientation
-	 */
-	protected static int getSurfaceOrientation(final int rotation) {
-		switch (rotation) {
-		case Surface.ROTATION_90:         return 90;
-		case Surface.ROTATION_180:        return 180;
-		case Surface.ROTATION_270: 	      return 270;
-		case Surface.ROTATION_0: default: return 0;
-		}
-	}
-
-	/**
-	 * Orientation listener that will call {@link CallFragment#setOrientation(int)} only
-	 * when the capped orientation has changed
-	 */
-	private class CallOrientationEventListener extends OrientationEventListener {
-
-		/**
-		 * Previous capped orientation.
-		 * Used to call {@link CallFragment#setOrientation(int)} only when the capped orientation changes.
-		 */
-		private int lastOrientation = -1;
-
-		/**
-		 * Constructor
-		 */
-		public CallOrientationEventListener() {
-			super(CallFragment.this.getActivity(), SensorManager.SENSOR_DELAY_NORMAL);
-		}
-
-		@Override public void onOrientationChanged(int orientation) {
-			orientation = getCappedOrientation(orientation);
-			orientation = (orientation + 360 - CallFragment.this.correction) % 360;
-			if (this.lastOrientation != orientation) {
-				setOrientation(orientation);
-				this.lastOrientation = orientation;
-			}
-		}
-	}
-
 	@Override
-	public View onCreateView(final LayoutInflater inflater, final ViewGroup container, final Bundle savedInstanceState) {
-		final View root = inflater.inflate(R.layout.weemo_fragment_call, container, false);
+	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+		super.onCreateView(inflater, container, savedInstanceState);
 
-		final boolean locked = getArguments().getBoolean(ARG_LOCKED);
+		View root = inflater.inflate(R.layout.weemo_fragment_call, container, false);
+		this.controls = (CallControl) root.findViewById(R.id.call_control);
 
-		// Get the OUT frame from the inflated view and set the call to use it
+		if (!getArguments().getBoolean(ARG_SHOW_CONTROL, true)) {
+			this.controls.setVisibility(View.GONE);
+		}
+
+		root.setOnTouchListener(this);
+
+		if (this.call == null) {
+			return root;
+		}
+
+		this.controls.setCall(this.call);
+
 		this.videoOutFrame = (WeemoVideoOutPreviewFrame) root.findViewById(R.id.video_out);
-		this.videoOutFrame.setUseDeviceOrientation(locked);
-		int vOutCorrection = getArguments().getInt(ARG_CORRECTION);
-		if (!locked && vOutCorrection > 0)
-			this.videoOutFrame.setDeviceCorrection(vOutCorrection);
+		this.videoOutFrame.setDeviceCorrection(getArguments().getInt(ARG_CORRECTION));
+		assert this.call != null;
 		this.call.setVideoOut(this.videoOutFrame);
 
-		// Get the IN frame from the inflated view and set the call to use it
-		// We set its display to follow device orientation because we have blocked the device rotation
 		final WeemoVideoInFrame videoInFrame = (WeemoVideoInFrame) root.findViewById(R.id.video_in);
-		videoInFrame.setDisplayFollowDeviceOrientation(locked);
 		this.call.setVideoIn(videoInFrame);
 
-		if (locked) {
-			// This will call setOrientation each time the device orientation have changed
-			// This allows us to display the control ui buttons in the correct orientation
-			this.oel = new CallOrientationEventListener();
-		}
-
-		// Simple brodcast receiver that will call setSpeakerphoneOn when receiving an intent
-		// It will be registered for Intent.ACTION_HEADSET_PLUG intents
-		this.headsetPlugReceiver = new BroadcastReceiver() {
-			@Override public void onReceive(final Context context, final Intent intent) {
-				setSpeakerphoneOn(!CallFragment.this.audioManager.isWiredHeadsetOn());
+		this.videoOutFrame.post(new Runnable() {
+			@Override public void run() {
+				assert CallFragment.this.call != null;
+				setVideoOutFrameDimensions(CallFragment.this.call.isReceivingVideo());
 			}
-		};
-
-		initCallButtons(root);
-		initVideoButtons(root);
-
-		// By default, we set the audio IN route according to isWiredHeadsetOn
-		setSpeakerphoneOn(!this.audioManager.isWiredHeadsetOn());
-
-		// Get the correction for the OrientationEventListener
-		this.correction = getSurfaceOrientation(getActivity().getWindowManager().getDefaultDisplay().getRotation());
-
-		// Sets the camera preview dimensions according to whether or not the remote contact has started his video
-		setVideoOutFrameDimensions(this.call.isReceivingVideo());
+		});
 
 		return root;
 	}
 
 	@Override
 	public void onDestroy() {
-		// Unregister as event listener
+		this.handler.removeCallbacksAndMessages(null);
+
+		if (getArguments().getBoolean(ARG_FULLSCREEN)) {
+			getActivity().getWindow().getDecorView().setOnSystemUiVisibilityChangeListener(null);
+		}
+
 		Weemo.eventBus().unregister(this);
+
+		getActivity().getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
 		super.onDestroy();
 	}
 
 	/**
-	 * Uses AudioManager to route audio to Speakerphone or not
-	 *
-	 * @param isOn Whether to set speakers (true) or internals (false)
+	 * Post the removal of the control bar after {@link #CONTROL_DELAY}
+	 * Does nothing if the fragment is not configured to hide the call control bar
 	 */
-	protected void setSpeakerphoneOn(final boolean isOn) {
-		this.audioManager.setSpeakerphoneOn(isOn);
-		this.toggleIn.setImageResource(isOn ? R.drawable.weemo_volume_on : R.drawable.weemo_volume_muted);
-		this.isSpeakerphoneOn = isOn;
+	void postControlRemove() {
+		if (!getArguments().getBoolean(ARG_SLIDE_CONTROL)) {
+			return ;
+		}
+
+		this.handler.removeCallbacks(this.removeControl);
+		this.handler.postDelayed(this.removeControl, CONTROL_DELAY);
+	}
+
+	@Override
+	public void onSystemUiVisibilityChange(int visibility) {
+		if (visibility == 0) {
+			show();
+			postControlRemove();
+		}
+	}
+
+	@Override
+	public boolean onTouch(View v, MotionEvent event) {
+		if (!getArguments().getBoolean(ARG_SLIDE_CONTROL)) {
+			return false;
+		}
+
+		postControlRemove();
+		return false;
+	}
+
+	/**
+	 * Hides or show the call control bar
+	 * @param offset 1 completely hides it, 0 shows it completely
+	 */
+	public void setControlOut(float offset) {
+		if (offset < 0.01) {
+			postControlRemove();
+		}
+		else {
+			this.handler.removeCallbacksAndMessages(null);
+		}
+
+		this.controls.setTranslationY(-(this.dp20) * offset);
+		this.controls.setAlpha(1.0f - offset);
 	}
 
 	/**
@@ -345,85 +317,28 @@ public class CallFragment extends Fragment {
 	 *
 	 * @param isReceivingVideo Whether or not we are receiving video
 	 */
-	private void setVideoOutFrameDimensions(final boolean isReceivingVideo) {
+	protected void setVideoOutFrameDimensions(final boolean isReceivingVideo) {
 		final DisplayMetrics metrics = new DisplayMetrics();
 		getActivity().getWindowManager().getDefaultDisplay().getMetrics(metrics);
 
-		final LayoutParams params = this.videoOutFrame.getLayoutParams();
+		final ViewGroup.LayoutParams params = this.videoOutFrame.getLayoutParams();
 		if (isReceivingVideo) {
 			params.width = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 32 * 4, metrics);
 			params.height = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 32 * 4, metrics);
 		}
 		else {
-			params.width = LayoutParams.MATCH_PARENT;
-			params.height = LayoutParams.MATCH_PARENT;
+			params.width = ViewGroup.LayoutParams.MATCH_PARENT;
+			params.height = ViewGroup.LayoutParams.MATCH_PARENT;
+		}
+
+		if (getView().getWidth() > getView().getHeight()) {
+			params.height = ViewGroup.LayoutParams.WRAP_CONTENT;
+		}
+		else if (getView().getHeight() > getView().getWidth()) {
+			params.width = ViewGroup.LayoutParams.WRAP_CONTENT;
 		}
 
 		this.videoOutFrame.setLayoutParams(params);
-	}
-
-	/**
-	 * Animate the property of an object.
-	 * may first add or remove 360 degrees to the property
-	 * to ensure that the property will rotate in the right direction
-	 *
-	 * @param view The view to animate
-	 * @param property The property of the view to animate
-	 * @param current The current value of the property
-	 * @param angle The target value of the property
-	 */
-	private static void animate(final View view, final String property, final float current, final int angle) {
-		if (angle - current > 180) {
-			ObjectAnimator.ofFloat(view, property, current + 360).setDuration(0).start();
-		}
-		else if (current - angle > 180) {
-			ObjectAnimator.ofFloat(view, property, current - 360).setDuration(0).start();
-		}
-
-		ObjectAnimator.ofFloat(view, property, angle).start();
-	}
-
-	/**
-	 * Sets orientation of all UI elements
-	 * This is called by the OrientationEventListener
-	 *
-	 * @param orientation The new orientation to set
-	 */
-	protected void setOrientation(final int orientation) {
-		animate(this.toggleIn,    PROP_ROTATION, this.toggleIn.getRotation(),    orientation);
-		animate(this.muteOut,     PROP_ROTATION, this.muteOut.getRotation(),     orientation);
-		animate(this.video,       PROP_ROTATION, this.video.getRotation(),       orientation);
-		animate(this.videoToggle, PROP_ROTATION, this.videoToggle.getRotation(), orientation);
-		animate(this.hangup,      PROP_ROTATION, this.hangup.getRotation(),      orientation);
-	}
-
-	@Override
-	public void onStart() {
-		super.onStart();
-
-		// Start listening for orientation changes
-		if (this.oel != null && this.oel.canDetectOrientation()) {
-			this.oel.enable();
-		}
-
-		// Register the BrodcastReceiver to detect headset connection change
-		final IntentFilter filter = new IntentFilter(Intent.ACTION_HEADSET_PLUG);
-		filter.setPriority(0);
-		getActivity().registerReceiver(this.headsetPlugReceiver, filter);
-	}
-
-	@Override
-	public void onStop() {
-		// We do not need to listen for orientation change while we are in the background
-		// Beside, not stoping this will generate a leak when the fragment is destroyed
-		if (this.oel != null) {
-			this.oel.disable();
-		}
-
-		// Same as the line above
-		getActivity().unregisterReceiver(this.headsetPlugReceiver);
-
-		super.onStop();
 	}
 
 	/**
@@ -437,12 +352,11 @@ public class CallFragment extends Fragment {
 	@WeemoEventListener
 	public void onReceivingVideoChanged(final ReceivingVideoChangedEvent event) {
 		// First, we check that this event concerns the call we are monitoring
-		if (event.getCall().getCallId() != this.call.getCallId()) {
+		if (this.call == null || event.getCall().getCallId() != this.call.getCallId()) {
 			return ;
 		}
 
 		// Sets the camera preview dimensions according to whether or not the remote contact has started his video
 		setVideoOutFrameDimensions(event.isReceivingVideo());
 	}
-
 }

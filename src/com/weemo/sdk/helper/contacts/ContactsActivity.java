@@ -4,15 +4,23 @@ import javax.annotation.CheckForNull;
 
 import org.acra.ACRA;
 
+import android.app.ActionBar;
 import android.app.Activity;
 import android.app.Fragment;
 import android.content.Intent;
+import android.content.res.Configuration;
 import android.os.Bundle;
+import android.support.v4.app.ActionBarDrawerToggle;
+import android.support.v4.view.GravityCompat;
+import android.support.v4.widget.DrawerLayout;
 import android.util.Log;
+import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MenuItem.OnMenuItemClickListener;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Toast;
 
 import com.weemo.sdk.Weemo;
@@ -25,7 +33,9 @@ import com.weemo.sdk.event.global.CanCreateCallChangedEvent;
 import com.weemo.sdk.helper.DemoAccounts;
 import com.weemo.sdk.helper.R;
 import com.weemo.sdk.helper.call.CallActivity;
+import com.weemo.sdk.helper.call.CallControl;
 import com.weemo.sdk.helper.call.CallFragment;
+import com.weemo.sdk.helper.call.CallFragment.TouchType;
 import com.weemo.sdk.helper.connect.ConnectedService;
 import com.weemo.sdk.helper.fragment.ChooseFragment;
 import com.weemo.sdk.helper.fragment.ChooseFragment.ChooseListener;
@@ -63,6 +73,16 @@ public class ContactsActivity extends Activity implements ChooseListener {
 	protected boolean checkedMode; // = false;
 
 	/**
+	 * Drawer toggle, null if there is no drawer (in phones)
+	 */
+	private @CheckForNull ActionBarDrawerToggle drawerToggle;
+
+	/**
+	 * Drawer, null if there is no drawer (in phones)
+	 */
+	protected @CheckForNull DrawerLayout drawer;
+
+	/**
 	 * Starts the call view if there is a call currently taking place
 	 * or starts the service to listen for call events if not.
 	 */
@@ -73,13 +93,14 @@ public class ContactsActivity extends Activity implements ChooseListener {
 		// If there is a call currently going on,
 		// it's probably because the user has clicked in the notification after going on its device home.
 		// In which case we redirect him to the CallActivity
-		final WeemoCall call = weemo.getCurrentCall();
+		WeemoCall call = weemo.getCurrentCall();
 
 		if (call == null) {
 			if (getIntent().getBooleanExtra(EXTRA_PICKUP, false)) {
 				final int callId = getIntent().getIntExtra(EXTRA_CALLID, -1);
-				if (callId != -1) {
-					startCallWindow(callId);
+				call = weemo.getCall(callId);
+				if (call != null) {
+					startCallWindow(call);
 				}
 			}
 			else {
@@ -89,22 +110,16 @@ public class ContactsActivity extends Activity implements ChooseListener {
 			}
 		}
 		else {
-			startCallWindow(call.getCallId());
+			startCallWindow(call);
 		}
 	}
 
 	/**
-	 * initialize this activity meaning that this activity is being built, not re-built.
+	 * Initializes this activity meaning that this activity is being built, not re-built.
+	 *
+	 * @param weemo The Weemo engine
 	 */
-	private void initialize() {
-		// Ensure that Weemo is initialized
-		final WeemoEngine weemo = Weemo.instance();
-		if (weemo == null) {
-			Log.e(LOGTAG, "ContactsActivity was started while Weemo is not initialized");
-			stopService(new Intent(this, ConnectedService.class));
-			return ;
-		}
-
+	private void initialize(WeemoEngine weemo) {
 		// Ensure that there is a connected user
 		if (currentUid == null) {
 			Log.e(LOGTAG, "ContactsActivity was started while Weemo is not authenticated");
@@ -120,7 +135,7 @@ public class ContactsActivity extends Activity implements ChooseListener {
 
 		// If we need to ask for the display name, shows the apropriate popup
 		if (weemo.getDisplayName().isEmpty()) {
-			String defaultName = "";
+			String defaultName = DemoAccounts.getDeviceName(false);
 			if (DemoAccounts.ACCOUNTS.containsKey(currentUid)) {
 				defaultName = DemoAccounts.ACCOUNTS.get(currentUid);
 			}
@@ -128,6 +143,44 @@ public class ContactsActivity extends Activity implements ChooseListener {
 		}
 
 		startCallOrService();
+	}
+
+	/**
+	 * Initializes the drawer.
+	 * Will do nothing in phone mode.
+	 *
+	 * @param weemo The Weemo engine
+	 */
+	private void initializeDrawer(WeemoEngine weemo) {
+		this.drawer = (DrawerLayout) findViewById(R.id.drawer);
+		if (this.drawer == null) {
+			return ;
+		}
+
+		this.drawer.setDrawerShadow(R.drawable.drawer_shadow, GravityCompat.START);
+		this.drawerToggle = new ActionBarDrawerToggle(
+			this,
+			this.drawer,
+			R.drawable.ic_navigation_drawer,
+			R.string.contacts_open,
+			R.string.contacts_close) {
+			// TODO
+		};
+
+		assert this.drawer != null;
+		this.drawer.setDrawerListener(this.drawerToggle);
+
+        getActionBar().setDisplayHomeAsUpEnabled(true);
+        getActionBar().setHomeButtonEnabled(true);
+
+        WeemoCall currentCall = weemo.getCurrentCall();
+        if (currentCall == null) {
+        	assert this.drawer != null;
+			this.drawer.openDrawer(Gravity.START);
+        }
+        else {
+        	putCallControls(currentCall);
+        }
 	}
 
 	@Override
@@ -138,14 +191,48 @@ public class ContactsActivity extends Activity implements ChooseListener {
 
 		UIUtils.forceOverflowMenu(this);
 
-		if (savedInstanceState == null) {
-			initialize();
+		// Ensure that Weemo is initialized
+		final WeemoEngine weemo = Weemo.instance();
+		if (weemo == null) {
+			Log.e(LOGTAG, "ContactsActivity was started while Weemo is not initialized");
+			stopService(new Intent(this, ConnectedService.class));
+			return ;
 		}
+
+		if (savedInstanceState == null) {
+			initialize(weemo);
+		}
+
+		initializeDrawer(weemo);
 
 		setTitleFromDisplayName();
 
 		// Register as event listener
 		Weemo.eventBus().register(this);
+	}
+
+	@Override
+	protected void onPostCreate(Bundle savedInstanceState) {
+		super.onPostCreate(savedInstanceState);
+		if (this.drawerToggle != null) {
+			this.drawerToggle.syncState();
+		}
+	}
+
+	@Override
+	public void onConfigurationChanged(Configuration newConfig) {
+		super.onConfigurationChanged(newConfig);
+		if (this.drawerToggle != null) {
+			this.drawerToggle.onConfigurationChanged(newConfig);
+		}
+	}
+
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		if (this.drawerToggle != null && this.drawerToggle.onOptionsItemSelected(item)) {
+			return true;
+		}
+		return super.onOptionsItemSelected(item);
 	}
 
 	@Override
@@ -161,14 +248,15 @@ public class ContactsActivity extends Activity implements ChooseListener {
 		// If there is a call currently going on,
 		// it's probably because the user has clicked in the notification after going on its device home.
 		// In which case we redirect him to the CallActivity
-		final WeemoCall call = weemo.getCurrentCall();
+		WeemoCall call = weemo.getCurrentCall();
 		if (call != null) {
-			startCallWindow(call.getCallId());
+			startCallWindow(call);
 		}
 		if (intent.getBooleanExtra(EXTRA_PICKUP, false)) {
 			final int callId = intent.getIntExtra(EXTRA_CALLID, -1);
-			if (callId != -1) {
-				startCallWindow(callId);
+			call = weemo.getCall(callId);
+			if (call != null) {
+				startCallWindow(call);
 			}
 		}
 	}
@@ -222,6 +310,11 @@ public class ContactsActivity extends Activity implements ChooseListener {
 	protected void onRestoreInstanceState(final Bundle savedInstanceState) {
 		super.onRestoreInstanceState(savedInstanceState);
 		this.checkedMode = savedInstanceState.getBoolean("checkedMode", false);
+		WeemoEngine weemo = Weemo.instance();
+		assert weemo != null;
+		if (weemo.getCurrentCall() == null) {
+			removeCallFragment();
+		}
 	}
 
 	@Override
@@ -297,26 +390,24 @@ public class ContactsActivity extends Activity implements ChooseListener {
 	 * If we are using a 10 inch or bigger tablet, shows the Call fragment in this activity
 	 * Otherwise, shows the activity that displays the call window fullscreen.
 	 *
-	 * @param callId The ID of the call to display
+	 * @param call The call to display
 	 */
-	protected void startCallWindow(final int callId) {
+	protected void startCallWindow(final WeemoCall call) {
 		runOnUiThread(new Runnable() {
 			@Override public void run() {
 				final View display = findViewById(R.id.contact_display);
-				((ChooseFragment)(getFragmentManager().findFragmentById(R.id.contact_list))).setEnabled(false);
+				ChooseFragment chooseFragment = (ChooseFragment)(getFragmentManager().findFragmentById(R.id.contact_list));
+				if(chooseFragment != null){
+					chooseFragment.setEnabled(false);
+				}
 				if (display == null) {
 					startActivity(
 						new Intent(ContactsActivity.this, CallActivity.class)
-							.putExtra(EXTRA_CALLID, callId)
+							.putExtra(EXTRA_CALLID, call.getCallId())
 					);
 				}
 				else {
-					getFragmentManager()
-					.beginTransaction()
-					.replace(R.id.contact_display, CallFragment.newInstance(callId, false,
-						getResources().getBoolean(R.bool.isBigTablet) ? -1 : 90
-					))
-					.commit();
+					showCallFragment(call);
 				}
 			}
 		});
@@ -381,6 +472,56 @@ public class ContactsActivity extends Activity implements ChooseListener {
 	}
 
 	/**
+	 * Only for tablets: will put the {@link CallControl} view inside the action bar
+	 *
+	 * @param call The call to control
+	 */
+	protected void putCallControls(WeemoCall call) {
+		CallControl callControl = new CallControl(this, CallControl.Style.DARK);
+		callControl.setCall(call);
+		float width = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 380, getResources().getDisplayMetrics());
+		ActionBar.LayoutParams layoutParams = new ActionBar.LayoutParams((int) width, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.RIGHT);
+		callControl.setLayoutParams(layoutParams);
+		getActionBar().setDisplayShowCustomEnabled(true);
+		getActionBar().setCustomView(callControl);
+	}
+
+	/**
+	 * Only for tablets: will show the call fragment
+	 *
+	 * @param call The call display
+	 */
+	protected void showCallFragment(final WeemoCall call) {
+		getFragmentManager()
+		.beginTransaction()
+		.replace(R.id.contact_display, CallFragment.newInstance(call.getCallId(), TouchType.NO_CONTROLS, getResources().getInteger(R.integer.camera_correction)))
+		.commit();
+		if (ContactsActivity.this.drawer != null) {
+			ContactsActivity.this.drawer.closeDrawer(Gravity.START);
+		}
+		putCallControls(call);
+	}
+
+	/**
+	 * Remove the call fragment, if any
+	 */
+	private void removeCallFragment() {
+		((ChooseFragment)(getFragmentManager().findFragmentById(R.id.contact_list))).setEnabled(true);
+		final View display = findViewById(R.id.contact_display);
+		if (display != null) {
+			final Fragment fragment = getFragmentManager().findFragmentById(R.id.contact_display);
+			if (fragment != null) {
+				getFragmentManager().beginTransaction().remove(fragment).commitAllowingStateLoss();
+			}
+			if (this.drawer != null) {
+				this.drawer.openDrawer(Gravity.START);
+			}
+			getActionBar().setDisplayShowCustomEnabled(false);
+			getActionBar().setCustomView(null);
+		}
+	}
+
+	/**
 	 * This listener method catches CallStatusChangedEvent
 	 * 1. It is annotated with @WeemoEventListener
 	 * 2. It takes one argument which type is CallStatusChangedEvent
@@ -401,14 +542,7 @@ public class ContactsActivity extends Activity implements ChooseListener {
 
 		// If a call has ended and we are in tablet mode, we need to remove the call window fragment.
 		if (event.getCallStatus() == CallStatus.ENDED) {
-			((ChooseFragment)(getFragmentManager().findFragmentById(R.id.contact_list))).setEnabled(true);
-			final View display = findViewById(R.id.contact_display);
-			if (display != null) {
-				final Fragment fragment = getFragmentManager().findFragmentById(R.id.contact_display);
-				if (fragment != null) {
-					getFragmentManager().beginTransaction().remove(fragment).commit();
-				}
-			}
+			removeCallFragment();
 		}
 	}
 

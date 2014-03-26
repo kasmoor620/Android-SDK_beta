@@ -52,10 +52,8 @@
             android:name="com.weemo.sdk.helper.call.IncomingActivity"
             android:theme="@android:style/Theme.Holo.Dialog" >
         </activity>
-        <activity
-            android:name="com.weemo.sdk.helper.call.CallActivity"
-            android:screenOrientation="landscape"
-            android:theme="@android:style/Theme.Holo.NoActionBar.Fullscreen" >
+        <activity android:name="com.weemo.sdk.helper.call.CallActivity"
+            android:theme="@style/weemo_call_theme">
         </activity>
         <activity
             android:name="org.acra.CrashReportDialog"

@@ -7,6 +7,7 @@ import android.app.Dialog;
 import android.app.DialogFragment;
 import android.content.DialogInterface;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.widget.EditText;
 
 import com.weemo.sdk.helper.R;
@@ -47,7 +48,9 @@ public class AskDisplayNameDialogFragment extends DialogFragment {
 		if (savedInstanceState == null) {
 			final String defaultName = getArguments().getString(ARG_DEFAULTNAME);
 			input.setText(defaultName);
-			input.setSelection(defaultName.length());
+			if (!TextUtils.isEmpty(defaultName)) {
+				input.selectAll();
+			}
 		}
 
 		alert.setView(input);
