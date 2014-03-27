@@ -7,7 +7,10 @@ import android.animation.Animator;
 import android.animation.AnimatorInflater;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.AnimatorSet;
+import android.annotation.SuppressLint;
+import android.app.DialogFragment;
 import android.app.Fragment;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.DisplayMetrics;
@@ -25,7 +28,10 @@ import com.weemo.sdk.WeemoCall;
 import com.weemo.sdk.WeemoEngine;
 import com.weemo.sdk.event.WeemoEventListener;
 import com.weemo.sdk.event.call.ReceivingVideoChangedEvent;
+import com.weemo.sdk.event.global.CanCreateCallChangedEvent;
+import com.weemo.sdk.event.global.CanCreateCallChangedEvent.Error;
 import com.weemo.sdk.helper.R;
+import com.weemo.sdk.helper.fragment.LoadingDialogFragment;
 import com.weemo.sdk.view.WeemoVideoInFrame;
 import com.weemo.sdk.view.WeemoVideoOutPreviewFrame;
 
@@ -53,6 +59,9 @@ public class CallFragment extends Fragment implements OnSystemUiVisibilityChange
 
 	/** fragment argument key */
 	private static final String ARG_CORRECTION = "correction";
+
+	/** The tag used to retrive all dialogs that this activity will launch */
+	private static final String TAG_DIALOG = "dialog";
 
 	/** UI (main) thread handler */
 	private @Nullable Handler handler;
@@ -136,7 +145,7 @@ public class CallFragment extends Fragment implements OnSystemUiVisibilityChange
 	 * Shows the call control bars
 	 * Does nothing if the fragment is not configured to hide the call control bar
 	 */
-	private void show() {
+	private void showCallControls() {
 		if (!getArguments().getBoolean(ARG_SLIDE_CONTROL)) {
 			return ;
 		}
@@ -160,7 +169,7 @@ public class CallFragment extends Fragment implements OnSystemUiVisibilityChange
 	 * hides the call control bars
 	 * Does nothing if the fragment is not configured to hide the call control bar
 	 */
-	protected void hide() {
+	protected void hideCallControls() {
 		if (!getArguments().getBoolean(ARG_SLIDE_CONTROL)) {
 			return ;
 		}
@@ -179,6 +188,7 @@ public class CallFragment extends Fragment implements OnSystemUiVisibilityChange
 		set.start();
 	}
 
+	@SuppressLint("InlinedApi")
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -186,17 +196,17 @@ public class CallFragment extends Fragment implements OnSystemUiVisibilityChange
 		getActivity().getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
 		this.removeControl = new Runnable() { // I miss Java8... this.removeControl = this::hide;
-			@Override public void run() { hide(); }
+			@Override public void run() { hideCallControls(); }
 		};
 		this.handler = new Handler();
 
-		if (getArguments().getBoolean(ARG_FULLSCREEN)) {
+		if (getArguments().getBoolean(ARG_FULLSCREEN) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
 			getActivity().getWindow().addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
 			getActivity().getWindow().addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION);
-			getActivity().getWindow().getDecorView().setOnSystemUiVisibilityChangeListener(this);
 		}
+		getActivity().getWindow().getDecorView().setOnSystemUiVisibilityChangeListener(this);
 
-		this.dp20 = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 70, getResources().getDisplayMetrics());
+		this.dp20 = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 20, getResources().getDisplayMetrics());
 
 		postControlRemove();
 
@@ -279,7 +289,7 @@ public class CallFragment extends Fragment implements OnSystemUiVisibilityChange
 	@Override
 	public void onSystemUiVisibilityChange(int visibility) {
 		if (visibility == 0) {
-			show();
+			showCallControls();
 			postControlRemove();
 		}
 	}
@@ -358,5 +368,29 @@ public class CallFragment extends Fragment implements OnSystemUiVisibilityChange
 
 		// Sets the camera preview dimensions according to whether or not the remote contact has started his video
 		setVideoOutFrameDimensions(event.isReceivingVideo());
+	}
+
+	/**
+	 * This listener catches CallStatusChangedEvent
+	 * 1. It is annotated with @WeemoEventListener
+	 * 2. It takes one argument which type is CallStatusChangedEvent
+	 * 3. It's activity object has been registered with Weemo.getEventBus().register(this) in onCreate()
+	 *
+	 * @param event The event
+	 */
+	@WeemoEventListener
+	public void onCanCreateCallChanged(final CanCreateCallChangedEvent event) {
+		final Error error = event.getError();
+		if (error == CanCreateCallChangedEvent.Error.NETWORK_LOST) {
+			final LoadingDialogFragment dialog = LoadingDialogFragment.newFragmentInstance("Disconnected", "Trying to reconnect...", "hang up");
+			dialog.setCancelable(false);
+			dialog.show(getFragmentManager(), TAG_DIALOG);
+		}
+		else if (error == null) {
+			final DialogFragment dialog = (DialogFragment) getFragmentManager().findFragmentByTag(TAG_DIALOG);
+			if (dialog != null) {
+				dialog.dismiss();
+			}
+		}
 	}
 }

@@ -69,13 +69,7 @@
             android:stateNotNeeded="true"
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
-        <service android:name="com.weemo.sdk.helper.connect.ConnectedService" >
-        </service>
-
-        <activity
-            android:name="com.weemo.sdk.helper.MainActivity"
-            android:label="@string/title_activity_main" >
-        </activity>
+        <service android:name="com.weemo.sdk.helper.connect.ConnectedService" />
     </application>
 
 </manifest>

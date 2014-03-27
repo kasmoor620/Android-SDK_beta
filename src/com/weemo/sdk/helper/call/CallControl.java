@@ -44,6 +44,21 @@ public class CallControl extends LinearLayout implements OnClickListener {
 	/** Whether the view should render for a Holo.Light or Holo.Dark */
 	public enum Style { /** Holo.Dark */ DARK, /** Holo.Light */ LIGHT }
 
+	/** The speakers button */
+	protected ImageButton speakers;
+
+	/** The micro button */
+	protected ImageButton micro;
+
+	/** The video button */
+	protected ImageButton video;
+
+	/** The frontBack button */
+	protected ImageButton frontBack;
+
+	/** The hangup button */
+	protected ImageButton hangup;
+
 	/**
 	 * Initializes this view (called from constructors)
 	 *
@@ -53,11 +68,11 @@ public class CallControl extends LinearLayout implements OnClickListener {
 		LayoutInflater inflater = (LayoutInflater)getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
 		inflater.inflate(R.layout.weemo_layout_callcontrol, this);
 
-		ImageButton speakers  = (ImageButton) findViewById(R.id.item_speakers);
-		ImageButton micro     = (ImageButton) findViewById(R.id.item_micro);
-		ImageButton video     = (ImageButton) findViewById(R.id.item_video);
-		ImageButton frontBack = (ImageButton) findViewById(R.id.item_front_back);
-		ImageButton hangup    = (ImageButton) findViewById(R.id.item_hangup);
+		speakers  = (ImageButton) findViewById(R.id.item_speakers);
+		micro     = (ImageButton) findViewById(R.id.item_micro);
+		video     = (ImageButton) findViewById(R.id.item_video);
+		frontBack = (ImageButton) findViewById(R.id.item_front_back);
+		hangup    = (ImageButton) findViewById(R.id.item_hangup);
 
 		CheatSheet.setup(speakers);
 		CheatSheet.setup(micro);
@@ -103,7 +118,12 @@ public class CallControl extends LinearLayout implements OnClickListener {
 	public void initAttr(AttributeSet attrs) {
 		TypedArray a = getContext().getTheme().obtainStyledAttributes(attrs, R.styleable.CallControl, 0, 0);
 
-		init(a.getInt(R.styleable.CallControl_style, 0) == 0 ? Style.DARK : Style.LIGHT);
+		try {
+			init(a.getInt(R.styleable.CallControl_style, 0) == 0 ? Style.DARK : Style.LIGHT);
+		}
+		finally {
+			a.recycle();
+		}
 	}
 
 	/**
@@ -133,10 +153,12 @@ public class CallControl extends LinearLayout implements OnClickListener {
 	@SuppressFBWarnings("NP_NONNULL_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR")
 	public CallControl(Context context, Style style) {
 		super(context);
-		if (style == null)
+		if (style == null) {
 			initAttr(null);
-		else
+		}
+		else {
 			init(style);
+		}
 	}
 
 	@Override
@@ -153,14 +175,14 @@ public class CallControl extends LinearLayout implements OnClickListener {
 		this.call = call;
 
 		if (!this.audioManager.isSpeakerphoneOn()) {
-			findViewById(R.id.item_speakers).setActivated(true);
+			speakers.setActivated(true);
 		}
 		if (!this.call.isSendingAudio()) {
-			findViewById(R.id.item_micro).setActivated(true);
+			micro.setActivated(true);
 		}
 		if (!this.call.isSendingVideo()) {
-			findViewById(R.id.item_video).setActivated(true);
-			findViewById(R.id.item_front_back).setVisibility(View.GONE);
+			video.setActivated(true);
+			frontBack.setVisibility(View.GONE);
 		}
 	}
 
@@ -183,12 +205,12 @@ public class CallControl extends LinearLayout implements OnClickListener {
 			case R.id.item_video:
 				if (v.isActivated()) {
 					this.call.videoStop();
-					findViewById(R.id.item_front_back).setVisibility(View.GONE);
+					frontBack.setVisibility(View.GONE);
 				}
 				else {
 					this.call.videoStart();
 					if (Camera.getNumberOfCameras() > 1) {
-						findViewById(R.id.item_front_back).setVisibility(View.VISIBLE);
+						frontBack.setVisibility(View.VISIBLE);
 					}
 				}
 				break ;
@@ -241,7 +263,6 @@ public class CallControl extends LinearLayout implements OnClickListener {
 		/**
 		 * required field that makes Parcelables from a Parcel
 		 */
-		@SuppressWarnings("hiding")
 		public static final Parcelable.Creator<SavedState> CREATOR =
 			new Parcelable.Creator<SavedState>() {
 				@Override
@@ -263,9 +284,9 @@ public class CallControl extends LinearLayout implements OnClickListener {
 		SavedState state = new SavedState(superState);
 
 		state.activated = new boolean[] {
-			findViewById(R.id.item_speakers).isActivated(),
-			findViewById(R.id.item_micro).isActivated(),
-			findViewById(R.id.item_video).isActivated()
+			speakers.isActivated(),
+			micro.isActivated(),
+			video.isActivated()
 		};
 
 		return state;
@@ -281,11 +302,11 @@ public class CallControl extends LinearLayout implements OnClickListener {
 		SavedState state = (SavedState) parcelable;
 		super.onRestoreInstanceState(state.getSuperState());
 
-		findViewById(R.id.item_speakers).setActivated(state.activated[0]);
-		findViewById(R.id.item_micro).setActivated(state.activated[1]);
-		findViewById(R.id.item_video).setActivated(state.activated[2]);
-		if (findViewById(R.id.item_video).isActivated() || Camera.getNumberOfCameras() < 2) {
-			findViewById(R.id.item_front_back).setVisibility(View.GONE);
+		speakers.setActivated(state.activated[0]);
+		micro.setActivated(state.activated[1]);
+		video.setActivated(state.activated[2]);
+		if (video.isActivated() || Camera.getNumberOfCameras() < 2) {
+			frontBack.setVisibility(View.GONE);
 		}
 	}
 
@@ -295,9 +316,10 @@ public class CallControl extends LinearLayout implements OnClickListener {
 
 		this.headsetPlugReceiver = new BroadcastReceiver() {
 			@Override public void onReceive(final Context context, final Intent intent) {
+				@SuppressWarnings("deprecation")
 				boolean isOn = !CallControl.this.audioManager.isWiredHeadsetOn();
 				CallControl.this.audioManager.setSpeakerphoneOn(isOn);
-				findViewById(R.id.item_speakers).setActivated(!isOn);
+				speakers.setActivated(!isOn);
 			}
 		};
 		getContext().registerReceiver(this.headsetPlugReceiver, new IntentFilter(Intent.ACTION_HEADSET_PLUG));

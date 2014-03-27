@@ -1,4 +1,5 @@
 <merge xmlns:android="http://schemas.android.com/apk/res/android" >
+
     <ImageButton
         android:id="@+id/item_speakers"
         style="@style/weemo_video_actionbar_button"
@@ -22,9 +23,8 @@
     <ImageButton
         android:id="@+id/item_hangup"
         style="@style/weemo_video_actionbar_button"
-        android:contentDescription="@string/weemo_hang_up"
-        android:src="@drawable/weemo_ic_action_exit_red"
         android:background="@drawable/weemo_selectable_background_red"
-        />
+        android:contentDescription="@string/weemo_hang_up"
+        android:src="@drawable/weemo_ic_action_exit_red" />
 
 </merge>

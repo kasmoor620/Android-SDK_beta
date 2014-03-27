@@ -14,7 +14,6 @@ import android.support.v4.app.ActionBarDrawerToggle;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.util.Log;
-import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -479,8 +478,8 @@ public class ContactsActivity extends Activity implements ChooseListener {
 	protected void putCallControls(WeemoCall call) {
 		CallControl callControl = new CallControl(this, CallControl.Style.DARK);
 		callControl.setCall(call);
-		float width = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 380, getResources().getDisplayMetrics());
-		ActionBar.LayoutParams layoutParams = new ActionBar.LayoutParams((int) width, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.RIGHT);
+		int width = (int) getResources().getDimension(R.dimen.weemo_call_control_width);
+		ActionBar.LayoutParams layoutParams = new ActionBar.LayoutParams(width, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.RIGHT);
 		callControl.setLayoutParams(layoutParams);
 		getActionBar().setDisplayShowCustomEnabled(true);
 		getActionBar().setCustomView(callControl);

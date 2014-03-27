@@ -3,7 +3,6 @@ package com.weemo.sdk.helper.call;
 import javax.annotation.Nullable;
 
 import android.app.Activity;
-import android.app.DialogFragment;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.media.AudioManager;
@@ -20,7 +19,7 @@ import com.weemo.sdk.event.global.CanCreateCallChangedEvent;
 import com.weemo.sdk.event.global.CanCreateCallChangedEvent.Error;
 import com.weemo.sdk.helper.R;
 import com.weemo.sdk.helper.call.CallFragment.TouchType;
-import com.weemo.sdk.helper.fragment.LoadingDialogFragment;
+import com.weemo.sdk.helper.contacts.ContactsActivity;
 
 /**
  * This is the activity in which calls will take place for phone devices.
@@ -43,7 +42,7 @@ public class CallActivity extends Activity implements DialogInterface.OnCancelLi
 
 		// The callId must be provided in the intent that started this activity
 		// If it is not, we finish the activity
-		final int callId = getIntent().getIntExtra("callId", -1);
+		final int callId = getIntent().getIntExtra(ContactsActivity.EXTRA_CALLID, -1);
 		if (callId == -1) {
 			finish();
 			return ;
@@ -137,20 +136,9 @@ public class CallActivity extends Activity implements DialogInterface.OnCancelLi
 	@WeemoEventListener
 	public void onCanCreateCallChanged(final CanCreateCallChangedEvent event) {
 		final Error error = event.getError();
-		if (error == CanCreateCallChangedEvent.Error.NETWORK_LOST) {
-			final LoadingDialogFragment dialog = LoadingDialogFragment.newFragmentInstance("Disconnected", "Trying to reconnect...", "hang up");
-			dialog.setCancelable(false);
-			dialog.show(getFragmentManager(), "dialog");
-		}
-		else if (error == CanCreateCallChangedEvent.Error.CLOSED) {
+		if (error == CanCreateCallChangedEvent.Error.CLOSED) {
 			Toast.makeText(this, error.description(), Toast.LENGTH_SHORT).show();
 			finish();
-		}
-		else if (error == null) {
-			final DialogFragment dialog = (DialogFragment) getFragmentManager().findFragmentByTag("dialog");
-			if (dialog != null) {
-				dialog.dismiss();
-			}
 		}
 	}
 

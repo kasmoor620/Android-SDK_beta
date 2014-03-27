@@ -13,16 +13,14 @@
         <com.weemo.sdk.view.WeemoVideoInFrame
             android:id="@+id/video_in"
             android:layout_width="match_parent"
-            android:layout_height="match_parent" >
-        </com.weemo.sdk.view.WeemoVideoInFrame>
+            android:layout_height="match_parent" />
 
         <com.weemo.sdk.view.WeemoVideoOutPreviewFrame
             android:id="@+id/video_out"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:layout_gravity="bottom|left"
-            android:layout_margin="20dp" >
-        </com.weemo.sdk.view.WeemoVideoOutPreviewFrame>
+            android:layout_margin="@dimen/weemo_video_out_margin" />
     </FrameLayout>
 
     <com.weemo.sdk.helper.call.CallControl
@@ -32,9 +30,8 @@
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true"
         android:layout_centerHorizontal="true"
-        android:background="#8333"
+        android:background="@color/weemo_call_control_bg"
         android:minWidth="400dp"
-        android:paddingTop="@dimen/weemo_callcontrols_paddingTop" >
-    </com.weemo.sdk.helper.call.CallControl>
+        android:paddingTop="@dimen/weemo_callcontrols_paddingTop" />
 
 </RelativeLayout>
