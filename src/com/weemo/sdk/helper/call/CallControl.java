@@ -68,44 +68,44 @@ public class CallControl extends LinearLayout implements OnClickListener {
 		LayoutInflater inflater = (LayoutInflater)getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
 		inflater.inflate(R.layout.weemo_layout_callcontrol, this);
 
-		speakers  = (ImageButton) findViewById(R.id.item_speakers);
-		micro     = (ImageButton) findViewById(R.id.item_micro);
-		video     = (ImageButton) findViewById(R.id.item_video);
-		frontBack = (ImageButton) findViewById(R.id.item_front_back);
-		hangup    = (ImageButton) findViewById(R.id.item_hangup);
+		this.speakers  = (ImageButton) findViewById(R.id.item_speakers);
+		this.micro     = (ImageButton) findViewById(R.id.item_micro);
+		this.video     = (ImageButton) findViewById(R.id.item_video);
+		this.frontBack = (ImageButton) findViewById(R.id.item_front_back);
+		this.hangup    = (ImageButton) findViewById(R.id.item_hangup);
 
-		CheatSheet.setup(speakers);
-		CheatSheet.setup(micro);
-		CheatSheet.setup(video);
-		CheatSheet.setup(frontBack);
-		CheatSheet.setup(hangup);
+		CheatSheet.setup(this.speakers);
+		CheatSheet.setup(this.micro);
+		CheatSheet.setup(this.video);
+		CheatSheet.setup(this.frontBack);
+		CheatSheet.setup(this.hangup);
 
 		switch (style) {
 		case DARK:
-			speakers  .setImageResource(R.drawable.weemo_ic_speakers_dark);
-			micro     .setImageResource(R.drawable.weemo_ic_mic_dark);
-			video     .setImageResource(R.drawable.weemo_ic_video_dark);
-			frontBack .setImageResource(R.drawable.weemo_ic_action_switch_video_dark);
+			this.speakers  .setImageResource(R.drawable.weemo_ic_speakers_dark);
+			this.micro     .setImageResource(R.drawable.weemo_ic_mic_dark);
+			this.video     .setImageResource(R.drawable.weemo_ic_video_dark);
+			this.frontBack .setImageResource(R.drawable.weemo_ic_action_switch_video_dark);
 			break;
 		case LIGHT:
 		default:
-			speakers  .setImageResource(R.drawable.weemo_ic_speakers_light);
-			micro     .setImageResource(R.drawable.weemo_ic_mic_light);
-			video     .setImageResource(R.drawable.weemo_ic_video_light);
-			frontBack .setImageResource(R.drawable.weemo_ic_action_switch_video_light);
+			this.speakers  .setImageResource(R.drawable.weemo_ic_speakers_light);
+			this.micro     .setImageResource(R.drawable.weemo_ic_mic_light);
+			this.video     .setImageResource(R.drawable.weemo_ic_video_light);
+			this.frontBack .setImageResource(R.drawable.weemo_ic_action_switch_video_light);
 			break;
 		}
 
-		speakers.setOnClickListener(this);
-		micro.setOnClickListener(this);
-		video.setOnClickListener(this);
-		frontBack.setOnClickListener(this);
-		hangup.setOnClickListener(this);
+		this.speakers.setOnClickListener(this);
+		this.micro.setOnClickListener(this);
+		this.video.setOnClickListener(this);
+		this.frontBack.setOnClickListener(this);
+		this.hangup.setOnClickListener(this);
 
 		if (!isInEditMode()) {
 			this.audioManager = (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);
 			if (Camera.getNumberOfCameras() < 2) {
-				frontBack.setVisibility(View.GONE);
+				this.frontBack.setVisibility(View.GONE);
 			}
 		}
 	}
@@ -175,14 +175,14 @@ public class CallControl extends LinearLayout implements OnClickListener {
 		this.call = call;
 
 		if (!this.audioManager.isSpeakerphoneOn()) {
-			speakers.setActivated(true);
+			this.speakers.setActivated(true);
 		}
 		if (!this.call.isSendingAudio()) {
-			micro.setActivated(true);
+			this.micro.setActivated(true);
 		}
 		if (!this.call.isSendingVideo()) {
-			video.setActivated(true);
-			frontBack.setVisibility(View.GONE);
+			this.video.setActivated(true);
+			this.frontBack.setVisibility(View.GONE);
 		}
 	}
 
@@ -205,12 +205,12 @@ public class CallControl extends LinearLayout implements OnClickListener {
 			case R.id.item_video:
 				if (v.isActivated()) {
 					this.call.videoStop();
-					frontBack.setVisibility(View.GONE);
+					this.frontBack.setVisibility(View.GONE);
 				}
 				else {
 					this.call.videoStart();
 					if (Camera.getNumberOfCameras() > 1) {
-						frontBack.setVisibility(View.VISIBLE);
+						this.frontBack.setVisibility(View.VISIBLE);
 					}
 				}
 				break ;
@@ -263,6 +263,7 @@ public class CallControl extends LinearLayout implements OnClickListener {
 		/**
 		 * required field that makes Parcelables from a Parcel
 		 */
+		@SuppressWarnings("hiding")
 		public static final Parcelable.Creator<SavedState> CREATOR =
 			new Parcelable.Creator<SavedState>() {
 				@Override
@@ -284,9 +285,9 @@ public class CallControl extends LinearLayout implements OnClickListener {
 		SavedState state = new SavedState(superState);
 
 		state.activated = new boolean[] {
-			speakers.isActivated(),
-			micro.isActivated(),
-			video.isActivated()
+			this.speakers.isActivated(),
+			this.micro.isActivated(),
+			this.video.isActivated()
 		};
 
 		return state;
@@ -302,11 +303,11 @@ public class CallControl extends LinearLayout implements OnClickListener {
 		SavedState state = (SavedState) parcelable;
 		super.onRestoreInstanceState(state.getSuperState());
 
-		speakers.setActivated(state.activated[0]);
-		micro.setActivated(state.activated[1]);
-		video.setActivated(state.activated[2]);
-		if (video.isActivated() || Camera.getNumberOfCameras() < 2) {
-			frontBack.setVisibility(View.GONE);
+		this.speakers.setActivated(state.activated[0]);
+		this.micro.setActivated(state.activated[1]);
+		this.video.setActivated(state.activated[2]);
+		if (this.video.isActivated() || Camera.getNumberOfCameras() < 2) {
+			this.frontBack.setVisibility(View.GONE);
 		}
 	}
 
@@ -319,7 +320,7 @@ public class CallControl extends LinearLayout implements OnClickListener {
 				@SuppressWarnings("deprecation")
 				boolean isOn = !CallControl.this.audioManager.isWiredHeadsetOn();
 				CallControl.this.audioManager.setSpeakerphoneOn(isOn);
-				speakers.setActivated(!isOn);
+				CallControl.this.speakers.setActivated(!isOn);
 			}
 		};
 		getContext().registerReceiver(this.headsetPlugReceiver, new IntentFilter(Intent.ACTION_HEADSET_PLUG));
